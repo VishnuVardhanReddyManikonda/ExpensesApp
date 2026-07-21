@@ -60,7 +60,7 @@ namespace Expenses.API.Data.Services
             return transaction;
         }
 
-        public Transaction? Update(int id,PutTransactionDto transaction)
+        public Transaction? Update(int id, PutTransactionDto transaction)
         {
             var transactionToUpdate = context.Transactions.FirstOrDefault(t => t.Id == id);
             if (transactionToUpdate != null)
@@ -68,14 +68,18 @@ namespace Expenses.API.Data.Services
                 transactionToUpdate.Type = transaction.Type ?? transactionToUpdate.Type;
                 transactionToUpdate.Amount = transaction.Amount ?? transactionToUpdate.Amount;
                 transactionToUpdate.Category = transaction.Category ?? transactionToUpdate.Category;
+
+                if (transaction.CreatedAt.HasValue)
+                {
+                    transactionToUpdate.CreatedAt = transaction.CreatedAt.Value;
+                }
+
                 transactionToUpdate.UpdatedAt = DateTime.Now;
 
                 context.Transactions.Update(transactionToUpdate);
                 context.SaveChanges();
             }
             return transactionToUpdate;
-
-
         }
     }
 }
