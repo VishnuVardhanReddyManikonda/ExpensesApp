@@ -19,7 +19,8 @@ namespace Expenses.API.Controllers
             try
             {
                 var allTransactions = transactionservice.GetAll();
-                return Ok(allTransactions);
+                var sortedTransactions = allTransactions.OrderByDescending(t => t.CreatedAt).ToList();
+                return Ok(sortedTransactions);
             }
             catch (Exception ex)
             {
