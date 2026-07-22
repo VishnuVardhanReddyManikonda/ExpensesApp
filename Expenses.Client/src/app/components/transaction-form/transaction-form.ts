@@ -1,9 +1,8 @@
-// transaction-form.ts
-import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TransactionService } from '../../services/transaction';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-transaction-form',
@@ -21,6 +20,7 @@ export class TransactionForm implements OnInit {
   transactionId?: number;
   isLoading = false;
   errorMessage = '';
+  todayDate = '';
 
   constructor(
     private fb: FormBuilder,
@@ -29,12 +29,38 @@ export class TransactionForm implements OnInit {
     private transactionService: TransactionService
   ) {
     const today = new Date().toISOString().split('T')[0];
+    this.todayDate = today;
+    
     this.transactionForm = this.fb.group({
       type: ['Expense', Validators.required],
       category: ['', Validators.required],
-      amount: ['', [Validators.required, Validators.min(0)]],
-      createdAt: [today, Validators.required]
+      amount: ['', [Validators.required, Validators.min(0.01)]],
+      createdAt: [today, [Validators.required, this.dateRangeValidator.bind(this)]]
     });
+  }
+
+  dateRangeValidator(control: AbstractControl): ValidationErrors | null {
+    if (!control.value) {
+      return null;
+    }
+
+    const selectedDate = new Date(control.value);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    if (selectedDate > today) {
+      return { futureDate: { value: control.value } };
+    }
+
+
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+    
+    if (selectedDate < oneYearAgo) {
+      return { tooOldDate: { value: control.value } };
+    }
+
+    return null;
   }
 
   ngOnInit(): void {
@@ -65,41 +91,56 @@ export class TransactionForm implements OnInit {
   }
 
   onSubmit(): void {
-    if (this.transactionForm.valid) {
-      this.isLoading = true;
-      this.errorMessage = '';
+    // Clear previous errors
+    this.errorMessage = '';
 
-      const formValue = this.transactionForm.value;
-      const transaction = {
-        type: formValue.type,
-        category: formValue.category,
-        amount: parseFloat(formValue.amount),
-        createdAt: formValue.createdAt
-      };
-
-      if (this.editMode && this.transactionId) {
-        this.transactionService.update(this.transactionId, transaction as any).subscribe({
-          next: () => {
-            this.isLoading = false;
-            this.router.navigate(['/transactions']);
-          },
-          error: (error) => {
-            this.errorMessage = `Failed to update transaction: ${error?.status}`;
-            this.isLoading = false;
-          }
-        });
+    // Check if form is valid
+    if (this.transactionForm.invalid) {
+      // Get date control errors
+      const dateControl = this.transactionForm.get('createdAt');
+      
+      if (dateControl?.hasError('futureDate')) {
+        this.errorMessage = 'Cannot add transaction for future dates';
+      } else if (dateControl?.hasError('tooOldDate')) {
+        this.errorMessage = 'Cannot add transaction older than 1 year';
       } else {
-        this.transactionService.create(transaction as any).subscribe({
-          next: () => {
-            this.isLoading = false;
-            this.router.navigate(['/transactions']);
-          },
-          error: (error) => {
-            this.errorMessage = `Failed to create transaction: ${error?.status}`;
-            this.isLoading = false;
-          }
-        });
+        this.errorMessage = 'Please fill all required fields correctly';
       }
+      return; // Don't submit
+    }
+
+    this.isLoading = true;
+
+    const formValue = this.transactionForm.value;
+    const transaction = {
+      type: formValue.type,
+      category: formValue.category,
+      amount: parseFloat(formValue.amount),
+      createdAt: formValue.createdAt
+    };
+
+    if (this.editMode && this.transactionId) {
+      this.transactionService.update(this.transactionId, transaction as any).subscribe({
+        next: () => {
+          this.isLoading = false;
+          this.router.navigate(['/transactions']);
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.errorMessage = error.error?.message || `Failed to update transaction: ${error?.status}`;
+        }
+      });
+    } else {
+      this.transactionService.create(transaction as any).subscribe({
+        next: () => {
+          this.isLoading = false;
+          this.router.navigate(['/transactions']);
+        },
+        error: (error) => {
+          this.isLoading = false;
+          this.errorMessage = error.error?.message || `Failed to create transaction: ${error?.status}`;
+        }
+      });
     }
   }
 

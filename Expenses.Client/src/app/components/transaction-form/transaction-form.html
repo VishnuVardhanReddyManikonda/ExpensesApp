@@ -1,4 +1,3 @@
-<!-- transaction-form.html -->
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
@@ -9,17 +8,27 @@
                     </h3>  
                 </div>
                 <div class="card-body p-4">
+                    
+                    <!-- Error Alert -->
+                    <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ errorMessage }}
+                        <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
+                    </div>
+
+                    <!-- Loading Indicator -->
+                    <div *ngIf="isLoading" class="alert alert-info">
+                        <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                        Loading...
+                    </div>
+
                     <form [formGroup]="transactionForm" (ngSubmit)="onSubmit()">
                         
-                        <div *ngIf="errorMessage" class="alert alert-danger alert-dismissible fade show" role="alert">
-                            {{ errorMessage }}
-                            <button type="button" class="btn-close" (click)="errorMessage = ''"></button>
-                        </div>
-
+                        <!-- Type Field -->
                         <div class="mb-4">
                             <label for="type" class="form-label fw-medium">Type</label>
                             <select 
                                 class="form-select form-select-lg"
+                                [class.is-invalid]="transactionForm.get('type')?.invalid && transactionForm.get('type')?.touched"
                                 id="type"
                                 formControlName="type"
                                 (change)="onTypeChange()"
@@ -27,12 +36,17 @@
                                 <option value="Expense">Expense</option>
                                 <option value="Income">Income</option>
                             </select>
+                            <div *ngIf="transactionForm.get('type')?.invalid && transactionForm.get('type')?.touched" class="invalid-feedback d-block text-danger">
+                                Type is required
+                            </div>
                         </div>
 
+                        <!-- Category Field -->
                         <div class="mb-4">
                             <label for="category" class="form-label fw-medium">Category</label>
                             <select 
                                 class="form-select form-select-lg"
+                                [class.is-invalid]="transactionForm.get('category')?.invalid && transactionForm.get('category')?.touched"
                                 id="category"
                                 formControlName="category"
                             >
@@ -41,8 +55,12 @@
                                     {{category}}
                                 </option>
                             </select>
+                            <div *ngIf="transactionForm.get('category')?.invalid && transactionForm.get('category')?.touched" class="invalid-feedback d-block text-danger">
+                                Category is required
+                            </div>
                         </div>
 
+                        <!-- Amount Field -->
                         <div class="mb-4">
                             <label for="amount" class="form-label fw-medium">Amount</label>
                             <div class="input-group">
@@ -50,29 +68,46 @@
                                 <input
                                     type="number"
                                     class="form-control form-control-lg"
+                                    [class.is-invalid]="transactionForm.get('amount')?.invalid && transactionForm.get('amount')?.touched"
                                     id="amount"
                                     formControlName="amount"
                                     placeholder="0.00"
                                     step="0.01"
                                 />
                             </div>
+                            <div *ngIf="transactionForm.get('amount')?.invalid && transactionForm.get('amount')?.touched" class="invalid-feedback d-block text-danger">
+                                <span *ngIf="transactionForm.get('amount')?.hasError('required')">Amount is required</span>
+                                <span *ngIf="transactionForm.get('amount')?.hasError('min')">Amount must be greater than 0</span>
+                            </div>
                         </div>
 
+                        <!-- Date Field -->
                         <div class="mb-4">
                             <label for="createdAt" class="form-label fw-medium">Date</label>
                             <input 
                                 type="date" 
-                                class="form-control form-control-lg" 
+                                class="form-control form-control-lg"
+                                [class.is-invalid]="transactionForm.get('createdAt')?.invalid && transactionForm.get('createdAt')?.touched"
                                 id="createdAt" 
-                                formControlName="createdAt">
+                                formControlName="createdAt"
+                                [max]="todayDate"
+                            >
+                            <small class="text-muted mt-2 d-block">
+                                Must be within last 1 year, cannot be in future
+                            </small>
+                            <div *ngIf="transactionForm.get('createdAt')?.invalid && transactionForm.get('createdAt')?.touched" class="invalid-feedback d-block text-danger">
+                                <span *ngIf="transactionForm.get('createdAt')?.hasError('required')">Date is required</span>
+                                <span *ngIf="transactionForm.get('createdAt')?.hasError('futureDate')">Cannot add transaction for future dates</span>
+                                <span *ngIf="transactionForm.get('createdAt')?.hasError('tooOldDate')">Cannot add transaction older than 1 year</span>
+                            </div>
                         </div>
 
                         <div class="d-flex gap-3 justify-content-end mt-4">
-                            <button type="button" class="btn btn-light btn-lg px-4" (click)="cancel()">
+                            <button type="button" class="btn btn-light btn-lg px-4" (click)="cancel()" [disabled]="isLoading">
                                 Cancel
                             </button>
                             <button type="submit" class="btn btn-primary btn-lg px-4" 
-                                [disabled]="!transactionForm.valid || isLoading">
+                                [disabled]="transactionForm.invalid || isLoading">
                                 <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                                 {{editMode ? "Update" : "Save"}} Transaction
                             </button>
