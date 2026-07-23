@@ -4,11 +4,11 @@ namespace Expenses.API.Data.Services
 {
     public interface ITransactionService
     {
-        List<Transaction> GetAll();
+        List<Transaction> GetAll(int userId);
 
         Transaction? GetById(int id);
 
-        Transaction Add(PostTransactionDto transaction);
+        Transaction Add(PostTransactionDto transaction,int userId);
 
         Transaction? Update(int id, PutTransactionDto transaction);
 

@@ -5,20 +5,33 @@ using Expenses.API.Models;
 using Expenses.API.Dtos;
 using Expenses.API.Data.Services;
 using Microsoft.AspNetCore.Cors;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace Expenses.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [EnableCors("AllowAll")]
+    [Authorize]
     public class TransactionsController(ITransactionService transactionservice) : ControllerBase
     {
         [HttpGet("All")]
         public IActionResult GetAll()
         {
+            var nameIdentifierClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(nameIdentifierClaim))
+            {
+                return BadRequest("Could not get th user id");
+
+            }
+            if (!int.TryParse(nameIdentifierClaim, out int userId))
+            {
+                return BadRequest();
+            }
             try
             {
-                var allTransactions = transactionservice.GetAll();
+                var allTransactions = transactionservice.GetAll(userId);
                 var sortedTransactions = allTransactions.OrderByDescending(t => t.CreatedAt).ToList();
                 return Ok(sortedTransactions);
             }
@@ -56,6 +69,16 @@ namespace Expenses.API.Controllers
         [HttpPost("Create")]
         public IActionResult CreateTransaction([FromBody] PostTransactionDto payload)
         {
+            var nameIdentifierClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(nameIdentifierClaim))
+            {
+                return BadRequest("Could not get th user id");
+
+            }
+            if(!int.TryParse(nameIdentifierClaim,out int userId))
+            {
+                return BadRequest();
+            }
             try
             {
                 if (!ModelState.IsValid)
@@ -75,7 +98,7 @@ namespace Expenses.API.Controllers
                     return BadRequest(new { message = "CreatedAt cannot be older than 1 year" });
                 }
 
-                var newTransaction = transactionservice.Add(payload);
+                var newTransaction = transactionservice.Add(payload,userId);
 
                 if (newTransaction == null)
                 {

@@ -8,7 +8,7 @@ namespace Expenses.API.Data.Services
     public class TransactionService(AppDbContext context) : ITransactionService
 
     {
-        public Transaction Add(PostTransactionDto transaction)
+        public Transaction Add(PostTransactionDto transaction, int userId)
         {
             var newTransaction = new Transaction
             {
@@ -16,7 +16,8 @@ namespace Expenses.API.Data.Services
                 Amount = transaction.Amount,
                 Category = transaction.Category,
                 CreatedAt = transaction.CreatedAt,
-                UpdatedAt = DateTime.Now
+                UpdatedAt = DateTime.Now,
+                UserId = userId
             };
 
             context.Transactions.Add(newTransaction);
@@ -35,9 +36,9 @@ namespace Expenses.API.Data.Services
             
         }
 
-        public List<Transaction> GetAll()
+        public List<Transaction> GetAll(int userId)
         {
-            var allTransactions = context.Transactions.ToList();
+            var allTransactions = context.Transactions.Where(t=>t.UserId==userId).ToList();
             return allTransactions;
         }
 
